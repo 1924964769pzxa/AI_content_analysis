@@ -1,0 +1,6 @@
+uvicorn~=0.37.0
+fastapi~=0.117.1
+starlette~=0.48.0
+httpx~=0.28.1
+pydantic~=2.11.9
+python-dotenv~=1.1.1

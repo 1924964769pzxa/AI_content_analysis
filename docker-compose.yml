@@ -1,0 +1,44 @@
+services:
+  ai-content-analysis:
+    image: harbor.moglas.cn/aicontents/aicontents:latest
+    container_name: ai-content-analysis-app
+    ports:
+      - "8801:8801"
+    environment:
+      # Dify 工作流配置 - 内容评分
+      - DIFY_SCORE_BASE_URL=${DIFY_SCORE_BASE_URL:-http://47.113.149.192:8899}
+      - DIFY_SCORE_TOKEN=${DIFY_SCORE_TOKEN:-app-r37MXZS4qwpMwTNIJ9KbXtRE}
+      - DIFY_SCORE_PATH=${DIFY_SCORE_PATH:-/v1/workflows/run}
+      - DIFY_SCORE_RESPONSE_MODE=${DIFY_SCORE_RESPONSE_MODE:-blocking}
+      
+      # Dify 工作流配置 - 内容分析
+      - DIFY_ANALYSIS_BASE_URL=${DIFY_ANALYSIS_BASE_URL:-http://47.113.149.192:8899}
+      - DIFY_ANALYSIS_TOKEN=${DIFY_ANALYSIS_TOKEN:-app-b4doufhE1ECy7D2ehR2F5de1}
+      - DIFY_ANALYSIS_PATH=${DIFY_ANALYSIS_PATH:-/v1/workflows/run}
+      - DIFY_ANALYSIS_RESPONSE_MODE=${DIFY_ANALYSIS_RESPONSE_MODE:-blocking}
+      
+      # 回调配置
+      - ANALYZE_CALLBACK_URL=${ANALYZE_CALLBACK_URL:-http://47.121.125.128:8010/material_library/analayze_result}
+      
+      # 性能配置
+      - ANALYSIS_MAX_CONCURRENCY=${ANALYSIS_MAX_CONCURRENCY:-8}
+      - ANALYSIS_HTTP_TIMEOUT=${ANALYSIS_HTTP_TIMEOUT:-60}
+      - ANALYSIS_HTTP_RETRIES=${ANALYSIS_HTTP_RETRIES:-2}
+    env_file:
+      - .env
+    volumes:
+      # 如果需要持久化日志或数据，可以添加卷挂载
+      - ./logs:/app/logs
+    networks:
+      - ai-content
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8801/docs', timeout=10)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  ai-content:
+    driver: bridge
