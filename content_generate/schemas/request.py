@@ -16,11 +16,10 @@ class HistoryPlan(BaseModel):
 
 class Persona(BaseModel):
     """
-    单个人设对象（注意：现在 data 数组中每个元素就是一个人设）
-    - 关键字段：tag（列表），可选 task_id/name 等
+    人设对象
     """
     tag: List[str] = Field(default_factory=list)
-    persona_info: Dict = Field(default_factory=list)
+    persona_info: Dict = Field(default_factory=dict)
     # 兼容某些传入把 "tags" 当做字段名的情况
     @validator("tag", pre=True, always=True)
     def _ensure_tag(cls, v, values, **kwargs):
@@ -34,13 +33,27 @@ class Persona(BaseModel):
     class Config:
         extra = "allow"  # 允许携带更多属性
 
-class GenerateItem(BaseModel):
+class PersonalData(BaseModel):
     """
-    data 数组的每个元素：对应一个人设
+    个人数据对象
     """
-    task_id: Union[int, str]
     personas: Persona
     history_plans: Optional[List[HistoryPlan]] = Field(default_factory=list)
+
+class GenerateItem(BaseModel):
+    """
+    创作任务对象
+    """
+    content_type: str = Field(..., description="涨粉/种草")
+    product_info: List[Any] = Field(default_factory=list, description="产品信息")
+    language_style: str = Field(default="", description="语言风格")
+    platform: str = Field(default="xhs", description="平台")
+    creative_elements: List[Any] = Field(default_factory=list, description="创作要素/项目信息")
+    title_requirement: str = Field(default="", description="标题要求")
+    content_requirement: str = Field(default="", description="内容要求")
+    articles: int = Field(default=1, description="生成篇数")
+    content_creation_id: int = Field(..., description="内容创作ID")
+    personal_data: List[PersonalData] = Field(default_factory=list, description="个人数据")
 
 class GenerateRequest(BaseModel):
     data: List[GenerateItem]

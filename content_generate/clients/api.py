@@ -8,7 +8,7 @@ import httpx
 from content_generate.config import (
     MAT_KEYWORDS_GET, KEYWORD_FILL_URL, MAT_SEARCH_BY_TAG, MAT_CREATE_SEARCH_TASK,
     DIFY_RUN_URL, DIFY_TOKEN_TYPE_DETECT, DIFY_TOKEN_SINGLE_WRITE, DIFY_TOKEN_COMBO_WRITE,
-    DIFY_TOKEN_SINGLE_IMAGE, HTTP_TIMEOUT, MAX_HTTP_CONCURRENCY,
+    DIFY_TOKEN_SINGLE_IMAGE, DIFY_TOKEN_KEYWORD_SELECT, HTTP_TIMEOUT, MAX_HTTP_CONCURRENCY,
     KEYWORD_POLL_MAX_SECONDS, KEYWORD_POLL_INTERVAL_SECONDS,
 )
 from content_generate.schemas.external import KeywordResp, MaterialSearchResp
@@ -134,12 +134,18 @@ class APIClient:
         r.raise_for_status()
         return r.json()
 
-    async def run_single_write(self, character: str, content_structure: str, title_list: str) -> Dict[str, Any]:
+    async def run_single_write(self, character: str, content_structure: str, title_list: str, 
+                              language_style: str = "", title_requirement: str = "", 
+                              content_requirement: str = "", creative_elements: List[Any] = None) -> Dict[str, Any]:
         payload = {
             "inputs": {
                 "character": character,
                 "content_structure": content_structure,
                 "title_list": title_list,
+                "language_style": language_style,
+                "title_requirement": title_requirement,
+                "content_requirement": content_requirement,
+                "creative_elements": creative_elements or [],
             },
             "response_mode": "blocking", "user": "workflows"
         }
@@ -151,12 +157,18 @@ class APIClient:
         r.raise_for_status()
         return r.json()
 
-    async def run_combo_write(self, character: str, content_structure: str, title_list: str) -> Dict[str, Any]:
+    async def run_combo_write(self, character: str, content_structure: str, title_list: str,
+                             language_style: str = "", title_requirement: str = "", 
+                             content_requirement: str = "", creative_elements: List[Any] = None) -> Dict[str, Any]:
         payload = {
             "inputs": {
                 "character": character,
                 "content_structure": content_structure,
                 "title_list": title_list,
+                "language_style": language_style,
+                "title_requirement": title_requirement,
+                "content_requirement": content_requirement,
+                "creative_elements": creative_elements or [],
             },
             "response_mode": "blocking", "user": "workflows"
         }
@@ -188,3 +200,34 @@ class APIClient:
         except Exception:
             logger.exception("解析单图配图返回失败")
             return None
+
+    async def run_keyword_select(self, creative_elements: List[Any], keywords: List[str]) -> Optional[str]:
+        """调用dify工作流进行关键词挑选"""
+        payload = {
+            "inputs": {
+                "creative_elements": creative_elements,
+                "keywords": keywords,
+            },
+            "response_mode": "blocking", "user": "workflows"
+        }
+        async with self._sem:
+            r = await self._client.post(
+                DIFY_RUN_URL, json=payload,
+                headers={"Authorization": f"Bearer {DIFY_TOKEN_KEYWORD_SELECT}", "Content-Type": "application/json"}
+            )
+        r.raise_for_status()
+        data = r.json()
+        try:
+            return data["data"]["outputs"].get("selected_keyword")
+        except Exception:
+            logger.exception("解析关键词挑选返回失败")
+            return None
+
+    async def run_xhs_cover_generation(self, title: str, content: str) -> Optional[Dict[str, Any]]:
+        """调用大模型输出xhs_cover_data内容"""
+        # TODO: 实现大模型调用逻辑
+        return {
+            "cover_style": "default",
+            "color_scheme": "warm",
+            "layout": "center"
+        }
